@@ -1,0 +1,6 @@
+name: viacarraria-database
+channels:
+  - conda-forge
+dependencies:
+  - nodejs=22
+  - pnpm=10

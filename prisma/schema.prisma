@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SourceStatus {
+  PENDING
+  PROCESSING
+  READY
+  ERROR
+}
+
+enum BillingProvider {
+  LOCAL
+  LEMON_SQUEEZY
+}
+
+model User {
+  id                     String           @id
+  name                   String
+  email                  String           @unique
+  emailVerified          Boolean          @default(false)
+  image                  String?
+  isAnonymous            Boolean          @default(false)
+  username               String?
+  subscriptionTier       String           @default("FREE")
+  lemonSqueezyCustomerId String?          @unique
+  subscriptionExpiresAt  DateTime?
+  preferredLanguage      String           @default("en")
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  sessions               Session[]
+  accounts               Account[]
+  graphs                 Graph[]
+  queries                Query[]
+  billingEvents          BillingEvent[]
+}
+
+model Session {
+  id         String   @id
+  expiresAt  DateTime
+  token      String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  ipAddress  String?
+  userAgent  String?
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String   @id
+  issuer                String
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([issuer, accountId], map: "Account_issuer_accountId_uidx")
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model Graph {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  userId      String
+  isPublic    Boolean      @default(false)
+  isPrepared  Boolean      @default(false)
+  nodes       Json
+  edges       Json
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sources     NodeSource[]
+  queries     Query[]
+
+  @@index([userId])
+  @@index([isPublic])
+}
+
+model GraphTemplate {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  title       String
+  description String?
+  category    String
+  nodes       Json
+  edges       Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NodeSource {
+  id        String       @id @default(uuid())
+  nodeId    String
+  graphId   String
+  name      String
+  fileType  String
+  fileUrl   String
+  fileHash  String
+  sizeBytes Int          @default(0)
+  status    SourceStatus @default(PENDING)
+  jobId     String?      @unique
+  content   String?
+  error     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  graph     Graph        @relation(fields: [graphId], references: [id], onDelete: Cascade)
+
+  @@index([graphId, nodeId])
+  @@index([fileHash])
+}
+
+model Query {
+  id              String   @id @default(uuid())
+  userId          String
+  graphId         String
+  queryText       String
+  selectedNodeIds Json
+  results         Json?
+  title           String?
+  isPinned        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  graph           Graph    @relation(fields: [graphId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([graphId, createdAt])
+}
+
+model BillingEvent {
+  id              String          @id @default(uuid())
+  userId          String
+  provider        BillingProvider
+  externalEventId String?         @unique
+  eventType       String
+  payload         Json
+  createdAt       DateTime        @default(now())
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
