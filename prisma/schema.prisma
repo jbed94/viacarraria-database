@@ -36,6 +36,7 @@ model User {
   sessions               Session[]
   accounts               Account[]
   graphs                 Graph[]
+  graphAttachments       GraphAttachment[]
   queries                Query[]
   billingEvents          BillingEvent[]
 }
@@ -100,9 +101,24 @@ model Graph {
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   sources     NodeSource[]
   queries     Query[]
+  attachments GraphAttachment[]
 
   @@index([userId])
   @@index([isPublic])
+}
+
+model GraphAttachment {
+  id        String   @id @default(uuid())
+  userId    String
+  graphId   String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  graph     Graph    @relation(fields: [graphId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, graphId], map: "GraphAttachment_userId_graphId_key")
+  @@index([userId])
+  @@index([graphId])
 }
 
 model GraphTemplate {
