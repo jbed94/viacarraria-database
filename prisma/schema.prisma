@@ -20,19 +20,19 @@ enum BillingProvider {
 }
 
 model User {
-  id                     String           @id
+  id                     String         @id
   name                   String
-  email                  String           @unique
-  emailVerified          Boolean          @default(false)
+  email                  String         @unique
+  emailVerified          Boolean        @default(false)
   image                  String?
-  isAnonymous            Boolean          @default(false)
+  isAnonymous            Boolean        @default(false)
   username               String?
-  subscriptionTier       String           @default("FREE")
-  lemonSqueezyCustomerId String?          @unique
+  subscriptionTier       String         @default("FREE")
+  lemonSqueezyCustomerId String?        @unique
   subscriptionExpiresAt  DateTime?
-  preferredLanguage      String           @default("en")
-  createdAt              DateTime         @default(now())
-  updatedAt              DateTime         @updatedAt
+  preferredLanguage      String         @default("en")
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
   sessions               Session[]
   accounts               Account[]
   graphs                 Graph[]
@@ -41,26 +41,26 @@ model User {
 }
 
 model Session {
-  id         String   @id
-  expiresAt  DateTime
-  token      String   @unique
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  ipAddress  String?
-  userAgent  String?
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model Account {
-  id                    String   @id
+  id                    String    @id
   issuer                String
   accountId             String
   providerId            String
   userId                String
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -68,8 +68,8 @@ model Account {
   refreshTokenExpiresAt DateTime?
   scope                 String?
   password              String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@unique([issuer, accountId], map: "Account_issuer_accountId_uidx")
   @@index([userId])
