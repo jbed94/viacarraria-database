@@ -21,7 +21,6 @@ import {
   medicineEdges,
 } from './seed-data/medicine.js';
 import { generateCoursePdf } from './seed-data/pdf-generator.js';
-import { syncDirectus } from './directus-sync.js';
 
 const prisma = new PrismaClient();
 
@@ -144,22 +143,26 @@ const graphs: SeedGraph[] = [
 ];
 
 async function main(): Promise<void> {
+  await prisma.$executeRawUnsafe(
+    `UPDATE "User" SET "id" = 'system', "username" = 'system' WHERE "id" = 'jbed94' AND NOT EXISTS (SELECT 1 FROM "User" WHERE "id" = 'system')`,
+  );
+
   await prisma.user.upsert({
-    where: { id: 'jbed94' },
+    where: { id: 'system' },
     update: {
-      name: 'Via Carraria',
+      name: 'Via Carraria System',
       email: 'system@viacarraria.local',
       emailVerified: true,
-      username: 'Via Carraria',
+      username: 'system',
       isAnonymous: false,
       subscriptionTier: 'PRO',
     },
     create: {
-      id: 'jbed94',
-      name: 'Via Carraria',
+      id: 'system',
+      name: 'Via Carraria System',
       email: 'system@viacarraria.local',
       emailVerified: true,
-      username: 'Via Carraria',
+      username: 'system',
       isAnonymous: false,
       subscriptionTier: 'PRO',
     },
@@ -171,7 +174,6 @@ async function main(): Promise<void> {
   await prisma.graph.deleteMany({
     where: {
       id: { in: ['system-language-learning', 'system-medical-foundations'] },
-      userId: 'jbed94',
     },
   });
 
@@ -181,6 +183,7 @@ async function main(): Promise<void> {
       update: {
         title: graph.title,
         description: graph.description,
+        userId: 'system',
         nodes: graph.nodes,
         edges: graph.edges,
         isPublic: true,
@@ -190,7 +193,7 @@ async function main(): Promise<void> {
         id: graph.id,
         title: graph.title,
         description: graph.description,
-        userId: 'jbed94',
+        userId: 'system',
         isPublic: true,
         isPrepared: true,
         nodes: graph.nodes,
@@ -253,8 +256,6 @@ async function main(): Promise<void> {
       })),
     });
   }
-
-  await syncDirectus();
 
   const apiUrl = process.env.API_URL ?? 'http://localhost:3000/api';
   const internalToken = process.env.INTERNAL_SERVICE_TOKEN ?? '';

@@ -1,6 +1,6 @@
 # Via Carraria — Database Sub-Repository Specification (`viacarraria-database`)
 
-This sub-repository manages PostgreSQL database migrations, Prisma ORM schema definitions, seed data for pre-baked knowledge graph templates, and Directus database-first admin panel configurations.
+This sub-repository manages PostgreSQL database migrations, Prisma ORM schema definitions, and seed data for pre-baked knowledge graph templates.
 
 ---
 
@@ -8,7 +8,7 @@ This sub-repository manages PostgreSQL database migrations, Prisma ORM schema de
 
 - **Database Engine**: PostgreSQL 16+
 - **ORM & Migrations**: Prisma ORM
-- **Admin Panel Platform**: Directus (Database-First Headless CMS & Admin UI)
+- **Admin Management**: Dedicated Decoupled Admin Panel (`viacarraria-frontend/dist-admin` + `viacarraria-backend`)
 - **Data Pattern**: Hybrid Relational + Document Model (`JSONB` for canvas nodes & edges)
 
 ---
@@ -164,13 +164,14 @@ CHECK (jsonb_typeof(edges) = 'array');
 
 ---
 
-## Directus Database-First Admin Integration
-
-Directus connects directly to PostgreSQL (`docker-compose.infra.yaml`) without requiring custom admin backend code:
-
-1. **JSONB Editor**: Directus renders syntax-highlighted JSON editors for `Graph.nodes` and `Graph.edges`, enabling direct admin inspection and manual graph edits.
-2. **User & RBAC Management**: Admins can adjust user subscription tiers (`FREE` -> `PRO`), reset passwords, inspect active sessions, and grant edit permissions.
-3. **Template Management**: Official system graphs (e.g., *Computer Science Skill Tree*, *English Learning Roadmap*, *Medical Foundations*) are curated via `GraphTemplate` entries in Directus and assigned to system user `jbed94`.
+## Dedicated Admin Panel & Administration Architecture
+ 
+Administration is provided by the dedicated, decoupled Admin Panel (`viacarraria-frontend/dist-admin`) connecting to administrative endpoints in `viacarraria-backend`:
+ 
+1. **JSONB Canvas Inspection**: Allows administrators to view, edit, and validate raw `nodes` and `edges` JSON structures with interactive schema validation.
+2. **User & Subscription Telemetry**: Manage users, grant/revoke `FREE` and `PRO` tiers, audit active sessions, and inspect usage.
+3. **Template Curation**: System roadmaps (*Computer Science*, *Finance*, *Medicine*) seeded directly in PostgreSQL and indexed in Weaviate.
+4. **Retention & Cold Storage**: Real-time audit logs, manual/automated retention sweeps, and S3/MinIO NDJSON gzip cold storage archival with in-browser inspection.
 
 ---
 

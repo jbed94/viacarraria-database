@@ -1,6 +1,6 @@
 # Via Carraria Database
 
-Prisma schema, PostgreSQL migrations, seed entrypoint, and Directus metadata for
+Prisma schema, PostgreSQL migrations, and seed entrypoint for
 Via Carraria.
 
 ## Development
@@ -15,4 +15,4 @@ The initial migration creates Better Auth users, sessions, accounts, and
 verification records alongside graphs, templates, source documents, queries,
 and billing events. It also includes JSONB array constraints for canvas data.
 The idempotent seed creates three public system roadmaps with ready source
-documents. Copy `.env.example` to `.env` before using Prisma or Directus locally.
+documents. Copy `.env.example` to `.env` before using Prisma locally.

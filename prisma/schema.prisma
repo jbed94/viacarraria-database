@@ -39,6 +39,7 @@ model User {
   graphAttachments       GraphAttachment[]
   queries                Query[]
   billingEvents          BillingEvent[]
+  notifications          Notification[]
 }
 
 model Session {
@@ -88,23 +89,29 @@ model Verification {
 }
 
 model Graph {
-  id          String       @id @default(uuid())
-  title       String
-  description String?
-  userId      String
-  isPublic    Boolean      @default(false)
-  isPrepared  Boolean      @default(false)
-  nodes       Json
-  edges       Json
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sources     NodeSource[]
-  queries     Query[]
-  attachments GraphAttachment[]
+  id                     String            @id @default(uuid())
+  title                  String
+  description            String?
+  userId                 String
+  isPublic               Boolean           @default(false)
+  isPrepared             Boolean           @default(false)
+  nodes                  Json
+  edges                  Json
+  lastAccessedAt         DateTime          @default(now())
+  scheduledForDeletionAt DateTime?
+  isExemptFromRetention  Boolean           @default(false)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sources                NodeSource[]
+  queries                Query[]
+  attachments            GraphAttachment[]
 
   @@index([userId])
   @@index([isPublic])
+  @@index([lastAccessedAt])
+  @@index([scheduledForDeletionAt])
+  @@index([isExemptFromRetention])
 }
 
 model GraphAttachment {
@@ -184,3 +191,35 @@ model BillingEvent {
 
   @@index([userId, createdAt])
 }
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+model GraphArchive {
+  id          String   @id @default(uuid())
+  graphId     String   @unique
+  userId      String
+  title       String
+  archiveUrl  String
+  sizeBytes   Int      @default(0)
+  sourceCount Int      @default(0)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+

@@ -2,7 +2,7 @@
   "name": "database",
   "version": "0.1.0",
   "private": true,
-  "description": "Via Carraria Prisma schema, migrations, and Directus metadata",
+  "description": "Via Carraria Prisma schema and PostgreSQL migrations",
   "license": "UNLICENSED",
   "type": "module",
   "packageManager": "pnpm@10.15.0",
@@ -15,7 +15,6 @@
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "seed": "prisma db seed",
-    "directus:sync": "tsx prisma/directus-sync.ts",
     "studio": "prisma studio",
     "format": "prisma format",
     "validate": "prisma validate"
