@@ -12,23 +12,25 @@
   },
   "scripts": {
     "generate": "prisma generate",
-    "migrate:dev": "prisma migrate dev",
-    "migrate:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push --accept-data-loss",
+    "db:reset": "prisma db push --force-reset && prisma db seed",
+    "migrate:deploy": "prisma migrate deploy || (prisma migrate resolve --applied 0_init && prisma migrate deploy)",
     "seed": "prisma db seed",
     "studio": "prisma studio",
     "format": "prisma format",
     "validate": "prisma validate"
   },
   "dependencies": {
-    "@prisma/client": "^6.15.0"
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "dotenv": "^18.0.3",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.18.0",
-    "prisma": "^6.15.0",
+    "@types/pg": "^8.23.1",
+    "prisma": "^7.10.0",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   }
 }

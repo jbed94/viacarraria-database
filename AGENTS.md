@@ -1,182 +1,71 @@
-# Via Carraria — Database Sub-Repository Specification (`viacarraria-database`)
+# Via Carraria — Database Specification (`viacarraria-database`)
 
-This sub-repository manages PostgreSQL database migrations, Prisma ORM schema definitions, and seed data for pre-baked knowledge graph templates.
+Database management: PostgreSQL schema migrations, Prisma ORM definitions, relational integrity, and seed data for knowledge graph templates.
 
 ---
 
-## Technical Stack & Architectural Pattern
+## Tech Stack & Data Architecture
 
 - **Database Engine**: PostgreSQL 16+
 - **ORM & Migrations**: Prisma ORM
-- **Admin Management**: Dedicated Decoupled Admin Panel (`viacarraria-frontend/dist-admin` + `viacarraria-backend`)
-- **Data Pattern**: Hybrid Relational + Document Model (`JSONB` for canvas nodes & edges)
+- **Storage Model**: Hybrid Relational + Document Model (Relational metadata with PostgreSQL `JSONB` for flexible canvas nodes and edges)
+- **Administration**: Decoupled Admin Panel (`viacarraria-frontend/dist-admin`) connecting via backend administrative API
 
 ---
 
-## Submodule Architecture & Environment Management
+## Environment & Directory Rules
 
-- **Environment Definition (`environment.yml`)**: Mamba environment `viacarraria-database` containing minimal platform tools ONLY (`nodejs`, `pnpm`).
-- **Dependency Installation**: `mamba run -n viacarraria-database pnpm install`
-- **Submodule Directory Standard**:
-  - `platforms/docker/`: Dockerfile definitions for container wrapping and platform serving.
-  - Docker Compose and Helm descriptors are owned exclusively by `viacarraria-infrastructure`.
+- **Env (`environment.yml`)**: Mamba env `viacarraria-database`. Tools: `nodejs`, `pnpm` only.
+- **Install**: `mamba run -n viacarraria-database pnpm install`
+- **Packaging**: `platforms/docker/` contains Dockerfile. Compose and Helm files reside in `viacarraria-infrastructure`.
 
 ---
 
-## Schema Architecture (`prisma/schema.prisma`)
+## Implemented Data Models & System Entities
 
-```prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+The database layer models user identity, canvas graphs, document sources, billing, credit transactions, and ad telemetry:
 
-generator client {
-  provider = "prisma-client-js"
-}
+1. **User Identity & Authentication**:
+   - **User**: Core profile containing email, username, verification flags, subscription tier (`FREE`, `PRO`), credit balances, customer IDs for payment gateways, and language preferences.
+   - **Session**: User login sessions storing authentication tokens, client IP addresses, user agents, and expiration timestamps.
+   - **Account**: Third-party OAuth providers (Google, GitHub) and local credential mappings.
+   - **Verification**: Email and password verification tokens.
 
-enum SourceStatus {
-  PENDING
-  PROCESSING
-  READY
-  ERROR
-}
+2. **Knowledge Graphs & Sources**:
+   - **Graph**: Canvas graph entities storing metadata, owner relations, visibility (`isPublic`), and serialized React Flow structures (`nodes` and `edges` in JSONB).
+   - **GraphTemplate**: Curated system graph roadmaps (*Computer Science*, *English Learning*, *Medicine*) readable by all users.
+   - **GraphAttachment**: File and binary attachments associated with knowledge graphs.
+   - **NodeSource**: Primary source documents (PDF, Markdown, TXT) linked to specific graph nodes. Tracks storage URLs, SHA-256 content hashes for deduplication, and ingestion lifecycle states (`PENDING`, `PROCESSING`, `READY`, `ERROR`).
 
-model User {
-  id                    String           @id
-  name                  String
-  email                 String           @unique
-  emailVerified         Boolean          @default(false)
-  image                 String?
-  isAnonymous           Boolean          @default(false)
-  username              String?
-  subscriptionTier      String           @default("FREE")
-  lemonSqueezyCustomerId String?          @unique
-  subscriptionExpiresAt DateTime?
-  preferredLanguage     String           @default("en")
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
+3. **Search History & Usage Credits**:
+   - **Query**: Historical Spatial GraphRAG queries, recording timestamps, target graphs, and query terms.
+   - **CreditTransaction**: Ledger tracking credit additions (top-ups, bonuses) and deductions (query consumption, file uploads).
 
-  sessions  Session[]
-  accounts  Account[]
-  graphs    Graph[]
-  queries   Query[]
-  billingEvents BillingEvent[]
-}
+4. **Monetization & Subscriptions**:
+   - **PlanDefinition**: Dynamic subscription plan configuration specifying tier identifiers, monthly query quotas, max node counts, source upload allowances, and credit rates.
+   - **BillingEvent**: Audit trail of payment webhook events received from Stripe and LemonSqueezy.
 
-model Session {
-  expiresAt DateTime
-  token     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String
+5. **Ad Telemetry & Rollup Aggregation**:
+   - **AdTelemetryEvent**: High-frequency telemetry logging ad impressions, clicks, and dismissals with provider tags and timestamps.
+   - **AdTelemetryDailyRollup**: Aggregated daily summaries calculating total impressions, clicks, dismissals, and CTR per day, enabling safe pruning of raw events.
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Account {
-  id                    String   @id
-  issuer                String
-  accountId             String
-  providerId            String
-  userId                String
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                 String?
-  password              String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  @@unique([issuer, accountId])
-}
-
-model Verification {
-  id         String   @id
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-}
-
-model Graph {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  userId      String
-  isPublic    Boolean  @default(false)
-  isPrepared  Boolean  @default(false)
-  nodes       Json     // JSONB array of React Flow nodes
-  edges       Json     // JSONB array of React Flow edges
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sources NodeSource[]
-}
-
-model GraphTemplate {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  category    String
-  nodes       Json     // JSONB canvas template
-  edges       Json     // JSONB canvas template
-  createdAt   DateTime @default(now())
-}
-
-model NodeSource {
-  id        String       @id @default(uuid())
-  nodeId    String       // Associated node ID inside graph's nodes JSONB
-  graphId   String
-  name      String
-  fileType  String
-  fileUrl   String
-  fileHash  String       // SHA-256 digest for deduplication
-  status    SourceStatus @default(PENDING)
-  createdAt DateTime     @default(now())
-
-  graph Graph @relation(fields: [graphId], references: [id], onDelete: Cascade)
-}
-```
+6. **System Governance & Archival**:
+   - **Notification**: In-app user notifications with read status and delivery tracking.
+   - **GraphArchive**: Cold storage metadata tracking archived graphs exported to compressed S3 object storage.
 
 ---
 
-## Database Constraints & Data Integrity
+## Data Constraints & Integrity Enforcement
 
-To prevent invalid JSON payloads from corrupting canvas rendering in React Flow, raw SQL migrations append PostgreSQL check constraints:
-
-```sql
-ALTER TABLE "Graph" 
-ADD CONSTRAINT check_nodes_is_array 
-CHECK (jsonb_typeof(nodes) = 'array');
-
-ALTER TABLE "Graph" 
-ADD CONSTRAINT check_edges_is_array 
-CHECK (jsonb_typeof(edges) = 'array');
-```
+- **JSON Array Constraints**: Raw SQL migrations enforce PostgreSQL check constraints ensuring `nodes` and `edges` JSONB columns always contain valid JSON arrays, preventing malformed payloads from breaking React Flow rendering.
+- **Deduplication Constraints**: Unique index on source file SHA-256 hashes prevents re-processing identical source documents across nodes.
+- **Referential Integrity**: Cascading deletes ensure child sources, sessions, and queries are cleaned up when graphs or user accounts are removed.
 
 ---
 
-## Dedicated Admin Panel & Administration Architecture
- 
-Administration is provided by the dedicated, decoupled Admin Panel (`viacarraria-frontend/dist-admin`) connecting to administrative endpoints in `viacarraria-backend`:
- 
-1. **JSONB Canvas Inspection**: Allows administrators to view, edit, and validate raw `nodes` and `edges` JSON structures with interactive schema validation.
-2. **User & Subscription Telemetry**: Manage users, grant/revoke `FREE` and `PRO` tiers, audit active sessions, and inspect usage.
-3. **Template Curation**: System roadmaps (*Computer Science*, *Finance*, *Medicine*) seeded directly in PostgreSQL and indexed in Weaviate.
-4. **Retention & Cold Storage**: Real-time audit logs, manual/automated retention sweeps, and S3/MinIO NDJSON gzip cold storage archival with in-browser inspection.
+## Operational Commands
 
----
-
-## Database Operational Commands
-
-- **Apply Migrations**: `npx prisma migrate dev`
-- **Generate Client**: `npx prisma generate`
-- **Seed Data**: `npx prisma db seed`
+- `npx prisma migrate dev` (Apply database migrations)
+- `pnpm db:push` or `npx prisma db push --accept-data-loss` (Synchronize database schema directly)
+- `npx prisma generate` (Regenerate Prisma client)
+- `npx prisma db seed` (Seed system templates and initial plan definitions)

@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum SourceStatus {
@@ -14,32 +13,26 @@ enum SourceStatus {
   ERROR
 }
 
-enum BillingProvider {
-  LOCAL
-  LEMON_SQUEEZY
-}
-
 model User {
-  id                     String         @id
-  name                   String
-  email                  String         @unique
-  emailVerified          Boolean        @default(false)
-  image                  String?
-  isAnonymous            Boolean        @default(false)
-  username               String?
-  subscriptionTier       String         @default("FREE")
-  lemonSqueezyCustomerId String?        @unique
-  subscriptionExpiresAt  DateTime?
-  preferredLanguage      String         @default("en")
-  createdAt              DateTime       @default(now())
-  updatedAt              DateTime       @updatedAt
-  sessions               Session[]
-  accounts               Account[]
-  graphs                 Graph[]
-  graphAttachments       GraphAttachment[]
-  queries                Query[]
-  billingEvents          BillingEvent[]
-  notifications          Notification[]
+  id                String            @id
+  name              String
+  email             String            @unique
+  emailVerified     Boolean           @default(false)
+  image             String?
+  isAnonymous       Boolean           @default(false)
+  username          String?
+  subscriptionTier  String            @default("REGISTERED")
+  storageLimitMb    Int?
+  notifyChannel     String            @default("IN_APP")
+  preferredLanguage String            @default("en")
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  sessions          Session[]
+  accounts          Account[]
+  graphs            Graph[]
+  graphAttachments  GraphAttachment[]
+  queries           Query[]
+  notifications     Notification[]
 }
 
 model Session {
@@ -120,8 +113,8 @@ model GraphAttachment {
   graphId   String
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  graph     Graph    @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  graph Graph @relation(fields: [graphId], references: [id], onDelete: Cascade)
 
   @@unique([userId, graphId], map: "GraphAttachment_userId_graphId_key")
   @@index([userId])
@@ -156,6 +149,7 @@ model NodeSource {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   graph     Graph        @relation(fields: [graphId], references: [id], onDelete: Cascade)
+  adTags    SourceAdTag[]
 
   @@index([graphId, nodeId])
   @@index([fileHash])
@@ -177,19 +171,6 @@ model Query {
 
   @@index([userId, createdAt])
   @@index([graphId, createdAt])
-}
-
-model BillingEvent {
-  id              String          @id @default(uuid())
-  userId          String
-  provider        BillingProvider
-  externalEventId String?         @unique
-  eventType       String
-  payload         Json
-  createdAt       DateTime        @default(now())
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
 }
 
 model Notification {
@@ -223,3 +204,82 @@ model GraphArchive {
   @@index([expiresAt])
 }
 
+model PlanDefinition {
+  id          String   @id @default(uuid())
+  tier        String   @unique
+  name        String
+  description String?
+  adsEnabled  Boolean  @default(false)
+  limits      Json     @default("{}")
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SystemSettings {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model AdTelemetryEvent {
+  id              String   @id @default(uuid())
+  eventType       String
+  format          String?
+  durationSeconds Float?   @default(0.0)
+  consent         String?
+  slotId          String?
+  graphId         String?
+  createdAt       DateTime @default(now())
+
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([graphId])
+}
+
+model AdTelemetryDailyRollup {
+  id                   String   @id @default(uuid())
+  date                 DateTime @db.Date
+  eventType            String
+  format               String?
+  consent              String?
+  graphId              String?
+  totalCount           Int      @default(0)
+  totalDurationSeconds Float    @default(0.0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([date, eventType, consent])
+  @@index([date])
+  @@index([graphId])
+}
+
+model AdContextTag {
+  id          String        @id @default(uuid())
+  name        String
+  slug        String        @unique
+  description String
+  enabled     Boolean       @default(true)
+  sendCount   Int           @default(0)
+  matchCount  Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  sources     SourceAdTag[]
+
+  @@index([enabled])
+  @@index([slug])
+}
+
+model SourceAdTag {
+  id        String       @id @default(uuid())
+  sourceId  String
+  tagId     String
+  score     Float        @default(0.0)
+  createdAt DateTime     @default(now())
+  source    NodeSource   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  tag       AdContextTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, tagId])
+  @@index([sourceId])
+  @@index([tagId])
+}

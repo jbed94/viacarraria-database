@@ -1,11 +1,14 @@
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 
+import 'dotenv/config';
+import { PrismaPg } from '@prisma/adapter-pg';
 import {
   Prisma,
   PrismaClient,
   SourceStatus,
 } from '@prisma/client';
+import { Pool } from 'pg';
 
 import type { Course, SeedEdge } from './seed-data/types.js';
 import {
@@ -22,7 +25,11 @@ import {
 } from './seed-data/medicine.js';
 import { generateCoursePdf } from './seed-data/pdf-generator.js';
 
-const prisma = new PrismaClient();
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 type SeedSource = {
   id: string;
@@ -155,7 +162,7 @@ async function main(): Promise<void> {
       emailVerified: true,
       username: 'system',
       isAnonymous: false,
-      subscriptionTier: 'PRO',
+      subscriptionTier: 'REGISTERED',
     },
     create: {
       id: 'system',
@@ -164,7 +171,128 @@ async function main(): Promise<void> {
       emailVerified: true,
       username: 'system',
       isAnonymous: false,
-      subscriptionTier: 'PRO',
+      subscriptionTier: 'REGISTERED',
+    },
+  });
+
+  const defaultSettings = [
+    {
+      key: 'similarityQuota',
+      value: {
+        anonymousThroughputPerMinute: 30,
+        registeredThroughputPerMinute: 120,
+      },
+    },
+    {
+      key: 'storageConfig',
+      value: { defaultStorageLimitMb: 100 },
+    },
+    {
+      key: 'adConfig',
+      value: {
+        effectiveEcpm: 1.5,
+        canvasAdDensity: 35,
+        maxCanvasAds: 5,
+      },
+    },
+  ];
+
+  for (const setting of defaultSettings) {
+    await prisma.systemSettings.upsert({
+      where: { key: setting.key },
+      update: {},
+      create: {
+        key: setting.key,
+        value: setting.value,
+      },
+    });
+  }
+
+  await prisma.planDefinition.deleteMany({
+    where: { tier: 'PRO' },
+  });
+
+  await prisma.planDefinition.upsert({
+    where: { tier: 'ANONYMOUS' },
+    update: {
+      name: 'Anonymous Guest',
+      description: 'Public exploration with single-seed shallow crawl.',
+      adsEnabled: true,
+      limits: {
+        maxNodes: 0,
+        maxSourcesPerGraph: 0,
+        maxSourceSizeBytes: 0,
+        maxSelectedNodes: 2,
+        maxGraphs: 0,
+        maxPrivateGraphs: 0,
+        allowedCrawlDepths: ['shallow'],
+        allowedHypothesisGroups: 0,
+        pdfUploadsAllowed: false,
+        maxUploadsPerHour: 0,
+      },
+    },
+    create: {
+      id: 'plan-anon',
+      tier: 'ANONYMOUS',
+      name: 'Anonymous Guest',
+      description: 'Public exploration with single-seed shallow crawl.',
+      adsEnabled: true,
+      limits: {
+        maxNodes: 0,
+        maxSourcesPerGraph: 0,
+        maxSourceSizeBytes: 0,
+        maxSelectedNodes: 2,
+        maxGraphs: 0,
+        maxPrivateGraphs: 0,
+        allowedCrawlDepths: ['shallow'],
+        allowedHypothesisGroups: 0,
+        pdfUploadsAllowed: false,
+        maxUploadsPerHour: 0,
+      },
+      version: 1,
+    },
+  });
+
+  await prisma.planDefinition.upsert({
+    where: { tier: 'REGISTERED' },
+    update: {
+      name: 'Registered User',
+      description:
+        'Full graph creation and deep multi-hop traversal with 100MB source storage.',
+      adsEnabled: true,
+      limits: {
+        maxNodes: null,
+        maxSourcesPerGraph: null,
+        maxSourceSizeBytes: 52428800,
+        maxSelectedNodes: null,
+        maxGraphs: null,
+        maxPrivateGraphs: null,
+        allowedCrawlDepths: ['shallow', 'default', 'deep'],
+        allowedHypothesisGroups: 4,
+        pdfUploadsAllowed: true,
+        maxUploadsPerHour: 50,
+      },
+    },
+    create: {
+      id: 'plan-registered',
+      tier: 'REGISTERED',
+      name: 'Registered User',
+      description:
+        'Full graph creation and deep multi-hop traversal with 100MB source storage.',
+      adsEnabled: true,
+      limits: {
+        maxNodes: null,
+        maxSourcesPerGraph: null,
+        maxSourceSizeBytes: 52428800,
+        maxSelectedNodes: null,
+        maxGraphs: null,
+        maxPrivateGraphs: null,
+        allowedCrawlDepths: ['shallow', 'default', 'deep'],
+        allowedHypothesisGroups: 4,
+        pdfUploadsAllowed: true,
+        maxUploadsPerHour: 50,
+      },
+      version: 1,
     },
   });
 
@@ -275,8 +403,12 @@ async function main(): Promise<void> {
 }
 
 main()
-  .then(() => prisma.$disconnect())
+  .then(async () => {
+    await prisma.$disconnect();
+    await pool.end();
+  })
   .catch(async (error: unknown) => {
     await prisma.$disconnect();
+    await pool.end();
     throw error;
   });
