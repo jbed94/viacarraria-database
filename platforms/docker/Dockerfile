@@ -1,6 +1,8 @@
 FROM node:22-alpine
 WORKDIR /app
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
+ENV COREPACK_HOME=/tmp/corepack
+ENV HOME=/tmp
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY prisma ./prisma
