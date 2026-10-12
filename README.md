@@ -14,5 +14,6 @@ mamba run -n viacarraria-database pnpm generate
 The initial migration creates Better Auth users, sessions, accounts, and
 verification records alongside graphs, templates, source documents, queries,
 and billing events. It also includes JSONB array constraints for canvas data.
-The idempotent seed creates three public system roadmaps with ready source
-documents. Copy `.env.example` to `.env` before using Prisma locally.
+The idempotent seed creates official public system roadmaps (PUT CS,
+UMP Medicine, 3 Legal Case simulations, and 4 Matura curricula) with ready
+source documents. Copy `.env.example` to `.env` before using Prisma locally.

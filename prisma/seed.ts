@@ -12,17 +12,37 @@ import { Pool } from 'pg';
 
 import type { Course, SeedEdge } from './seed-data/types.js';
 import {
-  computerScienceCourses,
-  computerScienceEdges,
-} from './seed-data/computer-science.js';
+  putCsCourses,
+  putCsEdges,
+} from './seed-data/put-computer-science.js';
 import {
-  financeCourses,
-  financeEdges,
-} from './seed-data/finance.js';
+  umpMedicineCourses,
+  umpMedicineEdges,
+} from './seed-data/ump-medicine.js';
 import {
-  medicineCourses,
-  medicineEdges,
-} from './seed-data/medicine.js';
+  criminalCaseCourses,
+  criminalCaseEdges,
+  commercialCaseCourses,
+  commercialCaseEdges,
+  administrativeCaseCourses,
+  administrativeCaseEdges,
+} from './seed-data/legal-cases.js';
+import {
+  highschoolMathCourses,
+  highschoolMathEdges,
+} from './seed-data/highschool-math.js';
+import {
+  highschoolHistoryCourses,
+  highschoolHistoryEdges,
+} from './seed-data/highschool-history.js';
+import {
+  highschoolBiologyCourses,
+  highschoolBiologyEdges,
+} from './seed-data/highschool-biology.js';
+import {
+  highschoolChemistryCourses,
+  highschoolChemistryEdges,
+} from './seed-data/highschool-chemistry.js';
 import { generateCoursePdf } from './seed-data/pdf-generator.js';
 
 const pool = new Pool({
@@ -94,21 +114,21 @@ function createGraph(
         {
           id: `source-${course.id}-core`,
           nodeId: course.id,
-          name: `${course.title} - Core Notes.md`,
+          name: 'Core Notes.md',
           fileType: 'text/markdown',
           content: course.coreNotes,
         },
         {
           id: `source-${course.id}-review`,
           nodeId: course.id,
-          name: `${course.title} - Review Prompts.md`,
+          name: 'Review Prompts.md',
           fileType: 'text/markdown',
           content: course.reviewPrompts,
         },
         {
           id: `source-${course.id}-syllabus-pdf`,
           nodeId: course.id,
-          name: `${course.title} - Syllabus & Reading Guide.pdf`,
+          name: 'Syllabus & Reading Guide.pdf',
           fileType: 'application/pdf',
           content: pdf.markdown,
           buffer: pdf.buffer,
@@ -120,32 +140,103 @@ function createGraph(
 }
 
 const graphs: SeedGraph[] = [
+  // 1. Poznan University of Technology (PUT) — Computer Science
   createGraph(
-    'system-medicine',
-    'medicine',
-    'Medicine: Polish Medical Programme',
-    'Medicine',
-    'A six-year, dependency-first map of the subjects commonly encountered in a Polish medical degree programme.',
-    medicineCourses,
-    medicineEdges,
+    'system-put-cs',
+    'put-computer-science',
+    'Informatyka — Politechnika Poznańska (PUT)',
+    'Informatyka',
+    'Oficjalny 7-semestralny program studiów inżynierskich na Wydziale Informatyki i Telekomunikacji Politechniki Poznańskiej: od programowania w C/C++ i algorytmów po uczenie maszynowe, chmurę i projekt inżynierski.',
+    putCsCourses,
+    putCsEdges,
   ),
+
+  // 2. Medical University of Poznan (UMP) — Medicine (Kierunek Lekarski)
   createGraph(
-    'system-computer-science',
-    'computer-science',
-    'Computer Science',
-    'Computer Science',
-    'A six-semester route from programming and mathematics to distributed systems and an engineering capstone.',
-    computerScienceCourses,
-    computerScienceEdges,
+    'system-ump-medicine',
+    'ump-medicine',
+    'Kierunek Lekarski — Uniwersytet Medyczny w Poznaniu (UMP)',
+    'Medycyna',
+    'Pełny 6-letni program jednolitych studiów magisterskich na Wydziale Lekarskim Uniwersytetu Medycznego im. Karola Marcinkowskiego w Poznaniu: od anatomii i biochemii, przez patomorfologię i internę Szczeklika, po medycynę ratunkową i LEK.',
+    umpMedicineCourses,
+    umpMedicineEdges,
   ),
+
+  // 3. Prawnicy — Sprawa Karna Gospodarcza (KPK / KK)
   createGraph(
-    'system-finance',
-    'finance',
-    'Finance & Valuation',
-    'Finance',
-    'A six-semester map from accounting and economics to valuation, risk, regulation, and a finance capstone.',
-    financeCourses,
-    financeEdges,
+    'system-legal-criminal',
+    'legal-criminal-case',
+    'Sprawa Karna: Oszustwo Finansowe i Cyberprzestępczość (KPK/KK)',
+    'Prawo Karne',
+    'Symulacja procedury karnej gospodarczej przed organami ścigania i Sądem Okręgowym w Poznaniu: zawiadomienie GIIF, zabezpieczenie nośników, areszt tymczasowy, ekspertyzy IT i blockchain, akt oskarżenia, przewód sądowy, wyrok i apelacja.',
+    criminalCaseCourses,
+    criminalCaseEdges,
+  ),
+
+  // 4. Prawnicy — Sprawa Gospodarcza / Cywilna (KPC / KC)
+  createGraph(
+    'system-legal-commercial',
+    'legal-commercial-case',
+    'Sprawa Gospodarcza: Spór o Wdrożenie IT i Kary Umowne (KPC/KC)',
+    'Prawo Gospodarcze',
+    'Proces cywilny w postępowaniu gospodarczym: wezwanie przedsądowe, odstąpienie, pozew z zabezpieczeniem konta bankowego, zarzut potrącenia i miarkowania kary umownej (art. 484 § 2 k.c.), plan rozprawy, opinia biegłego ds. ERP, wyrok i ugoda.',
+    commercialCaseCourses,
+    commercialCaseEdges,
+  ),
+
+  // 5. Prawnicy — Sprawa Sądowoadministracyjna (KPA / PPSA)
+  createGraph(
+    'system-legal-administrative',
+    'legal-administrative-case',
+    'Sprawa Sądowoadministracyjna: Zaskarżenie Decyzji Środowiskowej OZE (KPA/PPSA)',
+    'Prawo Administracyjne',
+    'Wieloinstancyjna kontrola legalności aktu administracyjnego: wniosek o DŚU dla farmy wiatrowej, raport OOŚ, decyzja wójta, odwołanie do SKO w Poznaniu, skarga do WSA w Poznaniu i skarga kasacyjna do Naczelnego Sądu Administracyjnego w Warszawie.',
+    administrativeCaseCourses,
+    administrativeCaseEdges,
+  ),
+
+  // 6. Liceum — Matematyka (Poziom Rozszerzony CKE)
+  createGraph(
+    'system-matura-math',
+    'matura-matematyka',
+    'Matematyka — Poziom Rozszerzony (Liceum CKE)',
+    'Liceum Ogólnokształcące',
+    '10 połączonych działów do matury rozszerzonej z matematyki: funkcje i wartość bezwzględna, wielomiany, trygonometria, ciągi i szeregi, planimetria, geometria analityczna, stereometria, rachunek różniczkowy, optymalizacja i prawdopodobieństwo.',
+    highschoolMathCourses,
+    highschoolMathEdges,
+  ),
+
+  // 7. Liceum — Historia (Poziom Rozszerzony CKE)
+  createGraph(
+    'system-matura-history',
+    'matura-historia',
+    'Historia — Poziom Rozszerzony (Liceum CKE)',
+    'Liceum Ogólnokształcące',
+    'Chronologiczny graf wiedzy maturalnej z historii: starożytność, średniowiecze, Rzeczpospolita Obojga Narodów, rozbiory, wiek XIX, II Rzeczpospolita, II wojna światowa, PRL oraz Solidarność i transformacja 1989 roku.',
+    highschoolHistoryCourses,
+    highschoolHistoryEdges,
+  ),
+
+  // 8. Liceum — Biologia (Poziom Rozszerzony CKE)
+  createGraph(
+    'system-matura-biology',
+    'matura-biologia',
+    'Biologia — Poziom Rozszerzony (Liceum CKE)',
+    'Liceum Ogólnokształcące',
+    'Kompleksowy repetytorium maturalne z biologii: chemia życia i enzymologia, cytologia, metabolizm i fotosynteza, genetyka molekularna, genetyka klasyczna Mendla, fizjologia człowieka, odporność i ewolucja z ekologią.',
+    highschoolBiologyCourses,
+    highschoolBiologyEdges,
+  ),
+
+  // 9. Liceum — Chemia (Poziom Rozszerzony CKE)
+  createGraph(
+    'system-matura-chemistry',
+    'matura-chemia',
+    'Chemia — Poziom Rozszerzony (Liceum CKE)',
+    'Liceum Ogólnokształcące',
+    'Pełny zakres wymagań matury rozszerzonej z chemii: budowa atomu i wiązania, stechiometria i gazy, termochemia i kinetyka, roztwory i pH, redoks i elektrochemia, związki nieorganiczne, węglowodory oraz pochodne z biochemią.',
+    highschoolChemistryCourses,
+    highschoolChemistryEdges,
   ),
 ];
 
@@ -297,11 +388,28 @@ async function main(): Promise<void> {
   });
 
   await prisma.graphTemplate.deleteMany({
-    where: { slug: 'language-learning' },
+    where: {
+      slug: {
+        in: [
+          'language-learning',
+          'medicine',
+          'computer-science',
+          'finance',
+        ],
+      },
+    },
   });
   await prisma.graph.deleteMany({
     where: {
-      id: { in: ['system-language-learning', 'system-medical-foundations'] },
+      id: {
+        in: [
+          'system-language-learning',
+          'system-medical-foundations',
+          'system-medicine',
+          'system-computer-science',
+          'system-finance',
+        ],
+      },
     },
   });
 
